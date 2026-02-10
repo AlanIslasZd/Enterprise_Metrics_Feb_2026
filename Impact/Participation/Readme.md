@@ -1,4 +1,4 @@
-# Metric: AI Bookings Participation Rate ("Triple Crown")
+# Metric: AI Bookings Participation Rate
 
 ## 1. Business Definition
 This metric tracks the percentage of sales representatives who have successfully sold **all three** of our strategic AI product lines. It measures cross-sell competency and adoption of the full AI suite.
