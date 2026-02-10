@@ -12,6 +12,7 @@ WITH all_reps AS (
         -- CRITICAL FILTERS ADDED HERE
         AND b.PRODUCT_ARR_USD > 0 
         AND b.OPPORTUNITY_IS_COMMISSIONABLE = TRUE
+        AND o.CREATED_DATE >= '2025-01-01'
 ),
 
 -- 2. CTE for COPILOT Wins
@@ -28,6 +29,7 @@ copilot_wins AS (
         -- CRITICAL FILTERS ADDED HERE
         AND b.PRODUCT_ARR_USD > 0 
         AND b.OPPORTUNITY_IS_COMMISSIONABLE = TRUE
+        AND o.CREATED_DATE >= '2025-01-01'
     GROUP BY 1
 ),
 
@@ -45,6 +47,7 @@ ai_agents_wins AS (
         -- CRITICAL FILTERS ADDED HERE
         AND b.PRODUCT_ARR_USD > 0 
         AND b.OPPORTUNITY_IS_COMMISSIONABLE = TRUE
+        AND o.CREATED_DATE >= '2025-01-01'
     GROUP BY 1
 ),
 
@@ -62,9 +65,20 @@ qa_wins AS (
         -- CRITICAL FILTERS ADDED HERE
         AND b.PRODUCT_ARR_USD > 0 
         AND b.OPPORTUNITY_IS_COMMISSIONABLE = TRUE
+        AND o.CREATED_DATE >= '2025-01-01'
+    GROUP BY 1
+),
+other_wins AS (
+    SELECT o.OWNER_ID, COUNT(DISTINCT o.ID) AS other_count
+    FROM FUNCTIONAL.GTM_SALES_OPS.GTMSI_CONSOLIDATED_PIPELINE_BOOKINGS b
+    JOIN CLEANSED.SALESFORCE.SALESFORCE_OPPORTUNITY_BCV o ON b.CRM_OPPORTUNITY_ID = o.ID
+    WHERE 
+        -- Explicitly exclude the AI products
+        b.PRODUCT NOT IN ('Copilot', 'Ultimate', 'Ultimate_AR', 'Zendesk_AR', 'QA')
+        AND o.IS_WON = TRUE AND b.DATE_LABEL = 'today' AND b.PRODUCT_ARR_USD > 0 
+        AND b.OPPORTUNITY_IS_COMMISSIONABLE = TRUE AND o.CREATED_DATE >= '2025-01-01'
     GROUP BY 1
 )
-
 -- 5. FINAL JOIN: The "Human Readable" Output
 SELECT 
     r.rep_name,
@@ -74,6 +88,7 @@ SELECT
     COALESCE(c.copilot_count, 0) AS count_copilot,
     COALESCE(a.agents_count, 0) AS count_ai_agents,
     COALESCE(q.qa_count, 0) AS count_qa,
+    COALESCE(o.other_count, 0) AS "Other Deals", -- New Column
     
     -- The Logic: Did they sell at least 1 of EACH?
     CASE 
@@ -88,5 +103,5 @@ FROM all_reps r
 LEFT JOIN copilot_wins c ON r.owner_id = c.OWNER_ID
 LEFT JOIN ai_agents_wins a ON r.owner_id = a.OWNER_ID
 LEFT JOIN qa_wins q ON r.owner_id = q.OWNER_ID
-
+LEFT JOIN other_wins o ON r.owner_id = o.OWNER_ID
 ORDER BY is_triple_crown_winner DESC, r.rep_name;
